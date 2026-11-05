@@ -11,9 +11,13 @@ import { ValidationSection } from "./validation";
 
 /** Order of importance: answer, visualization, evidence, validation, trace, report. */
 export function Result({ result }: { result: AnalyzeResponse }) {
-  const primary = primaryFinding(result.findings);
+  const primary = primaryFinding(result.findings, result.user_query);
   const firstMessage = result.findings.find((f) => f.message)?.message;
-  const chartLabel = primary ? `${primary.metric} by ${primary.entityKey}` : "Supporting visualization";
+  const chartLabel = primary
+    ? primary.entityKey.toLowerCase() === "dataset"
+      ? `${primary.metric} Distribution`
+      : `${primary.metric} by ${primary.entityKey}`
+    : "Supporting visualization";
 
   return (
     <div className="space-y-14">

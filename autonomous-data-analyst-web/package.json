@@ -6,14 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "test:bff": "node scripts/test-bff-response.mjs && node scripts/test-bff-http.mjs && node scripts/test-frontend-integration.mjs && node scripts/test-runtime-fixes.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.33.0",
     "@tanstack/react-query": "^5.90.2",
+    "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
     "geist": "^1.7.0",
+    "jose": "^6.2.14",
     "lucide-react": "^0.468.0",
     "motion": "^14.0.0",
     "next": "^16.0.0",
@@ -25,9 +29,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.5",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.7.0"
   }

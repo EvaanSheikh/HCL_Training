@@ -71,9 +71,9 @@ def group_and_aggregate(
             f"Metric column not found: {metric}"
         )
 
-    if not pd.api.types.is_numeric_dtype(df[metric]):
+    if aggregation != "count" and not pd.api.types.is_numeric_dtype(df[metric]):
         raise ValueError(
-            f"Metric must be numerical: {metric}"
+            f"Metric must be numerical for '{aggregation}' aggregation: {metric}"
         )
 
     allowed_aggregations = {
@@ -93,7 +93,7 @@ def group_and_aggregate(
     result = (
         df.groupby(group_by)[metric]
         .agg(aggregation)
-        .reset_index()
+        .reset_index(name=metric if metric != group_by else "count")
     )
 
     return result

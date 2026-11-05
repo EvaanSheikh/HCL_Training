@@ -1,15 +1,13 @@
 from pathlib import Path
+from uuid import uuid4
 
 from app.agents.analyst import execute_analysis_plan
 
 
-DATASET = "data/sample/sales.csv"
-
-
-def test_analyst_executes_revenue_plan():
+def test_analyst_executes_revenue_plan(uploaded_sales_dataset):
     state = {
         "user_query": "What is the total revenue by region?",
-        "dataset_id": DATASET,
+        "dataset_id": uploaded_sales_dataset,
         "analysis_plan": [
             {
                 "step": 1,
@@ -41,10 +39,10 @@ def test_analyst_executes_revenue_plan():
     assert result["errors"] == []
 
 
-def test_analyst_creates_visualization():
+def test_analyst_creates_visualization(uploaded_sales_dataset):
     state = {
         "user_query": "Show revenue by region.",
-        "dataset_id": DATASET,
+        "dataset_id": uploaded_sales_dataset,
         "analysis_plan": [
             {
                 "step": 1,
@@ -73,7 +71,7 @@ def test_analyst_creates_visualization():
 def test_analyst_handles_missing_dataset():
     state = {
         "user_query": "Analyze the dataset.",
-        "dataset_id": "data/sample/missing.csv",
+        "dataset_id": str(uuid4()),
         "analysis_plan": [],
         "tool_calls": [],
         "tool_results": [],

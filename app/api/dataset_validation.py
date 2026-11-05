@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import pandas as pd
+from app.tools.data_tools import load_dataset
 
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".json"}
@@ -10,7 +10,7 @@ def validate_dataset(path: str) -> dict:
     file_path = Path(path)
 
     if not file_path.exists():
-        raise FileNotFoundError(f"Dataset not found: {path}")
+        raise FileNotFoundError("Dataset not found.")
 
     if file_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
         raise ValueError(
@@ -19,19 +19,9 @@ def validate_dataset(path: str) -> dict:
         )
 
     try:
-        if file_path.suffix.lower() == ".csv":
-            df = pd.read_csv(file_path)
-
-        elif file_path.suffix.lower() == ".xlsx":
-            df = pd.read_excel(file_path)
-
-        else:
-            df = pd.read_json(file_path)
-
+        df = load_dataset(str(file_path))
     except Exception as exc:
-        raise ValueError(
-            f"Dataset could not be parsed: {exc}"
-        ) from exc
+        raise ValueError("Dataset could not be parsed or exceeds resource limits.") from exc
 
     if df.empty:
         raise ValueError("Dataset is empty.")

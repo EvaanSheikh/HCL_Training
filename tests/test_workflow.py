@@ -3,16 +3,20 @@ from pathlib import Path
 from app.graph.workflow import create_analysis_graph
 
 
-DATASET = "data/sample/sales.csv"
+def test_analysis_graph_initializes_state(uploaded_sales_dataset, monkeypatch):
+    from app.graph import workflow
 
-
-def test_analysis_graph_initializes_state():
+    monkeypatch.setattr(
+        workflow,
+        "generate_analysis_plan",
+        lambda query, profile: workflow._fallback_plan(query),
+    )
     graph = create_analysis_graph()
 
     result = graph.invoke({
         "session_id": "test-session",
         "user_query": "What is the total revenue?",
-        "dataset_id": DATASET,
+        "dataset_id": uploaded_sales_dataset,
         "status": "created",
     })
 
@@ -23,13 +27,20 @@ def test_analysis_graph_initializes_state():
     assert result["status"] == "analyzed"
 
 
-def test_graph_executes_planner_and_analyst():
+def test_graph_executes_planner_and_analyst(uploaded_sales_dataset, monkeypatch):
+    from app.graph import workflow
+
+    monkeypatch.setattr(
+        workflow,
+        "generate_analysis_plan",
+        lambda query, profile: workflow._fallback_plan(query),
+    )
     graph = create_analysis_graph()
 
     result = graph.invoke({
         "session_id": "test-session",
         "user_query": "What is the total revenue by region?",
-        "dataset_id": DATASET,
+        "dataset_id": uploaded_sales_dataset,
         "status": "created",
     })
 

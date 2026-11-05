@@ -4,6 +4,10 @@ from typing import Any
 SUPPORTED_ACTIONS = {
     "profile_dataset",
     "group_and_aggregate",
+    "calculate_descriptive_statistics",
+    "calculate_correlation",
+    "detect_outliers",
+    "calculate_percentage_change",
     "create_bar_chart",
     "create_line_chart",
     "create_histogram",
@@ -13,6 +17,10 @@ SUPPORTED_ACTIONS = {
 REQUIRED_PARAMETERS = {
     "profile_dataset": [],
     "group_and_aggregate": ["group_by", "metric"],
+    "calculate_descriptive_statistics": ["columns"],
+    "calculate_correlation": ["column_a", "column_b"],
+    "detect_outliers": ["column"],
+    "calculate_percentage_change": ["old_value", "new_value"],
     "create_bar_chart": ["x_column", "y_column"],
     "create_line_chart": ["x_column", "y_column"],
     "create_histogram": ["column"],

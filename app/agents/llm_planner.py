@@ -33,16 +33,14 @@ Supported actions:
 - create_histogram
 - create_scatter_plot
 
-Known derived metrics:
-- revenue
-- profit
+Time-series and Trend analysis:
+- For questions asking for trends, changes over time, or monthly/daily analysis:
+  Use group_and_aggregate with group_by="month" and the requested metric, followed by create_line_chart with x_column="month" and y_column=metric.
 
-Revenue:
-Quantity * UnitSellingPrice -
-(Quantity * UnitSellingPrice * DiscountPercentage / 100)
-
-Profit:
-Revenue - (Quantity * UnitCostPrice) - ShippingCost
+Domain and derived metrics:
+- Strictly use columns that exist in the provided dataset profile.
+- If the dataset contains sales transaction columns (Quantity, UnitSellingPrice, DiscountPercentage), revenue and profit derived metrics can be analyzed.
+- For all other domains (e.g. weather, education, real estate, demography, science), identify and use the actual numerical metrics and categorical dimensions from the dataset profile.
 
 Return JSON only:
 
@@ -76,7 +74,10 @@ COLUMN_ALIASES = {
     "Country": "country",
     "Category": "category",
     "ProductName": "product",
-    "OrderDate": "date",
+    "OrderDate": "month",
+    "order_date": "month",
+    "date": "month",
+    "month": "month",
 }
 
 
@@ -132,13 +133,20 @@ def _validate_plan_structure(plan: object) -> None:
             )
 
 
+def _is_placeholder_key(key: str | None) -> bool:
+    if not key or not key.strip():
+        return True
+    k = key.strip().lower()
+    return k.startswith("replace_") or "your_" in k or "example" in k or k == "placeholder"
+
+
 def _call_openrouter(
     user_query: str,
     dataset_profile: dict,
 ) -> str:
     api_key = os.getenv("OPENROUTER_API_KEY")
 
-    if not api_key:
+    if _is_placeholder_key(api_key):
         raise RuntimeError(
             "OPENROUTER_API_KEY is not configured."
         )
@@ -226,14 +234,15 @@ def _call_gemini(
     dataset_profile: dict,
 ) -> str:
     from google import genai
+    from google.genai import types
     from google.genai.errors import ClientError, ServerError
 
     api_key = os.getenv("GEMINI_API_KEY")
 
-    if not api_key:
+    if not api_key or _is_placeholder_key(api_key):
         api_key = os.getenv("GOOGLE_API_KEY")
 
-    if not api_key:
+    if not api_key or _is_placeholder_key(api_key):
         raise RuntimeError(
             "GEMINI_API_KEY or GOOGLE_API_KEY is not configured."
         )
@@ -257,6 +266,9 @@ def _call_gemini(
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
+                config=types.GenerateContentConfig(
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+                ),
             )
 
             if not response or not response.text:
@@ -352,10 +364,7 @@ def generate_analysis_plan(
             )
 
             # Gemini is optional. Only try it when configured.
-            if (
-                os.getenv("GEMINI_API_KEY")
-                or os.getenv("GOOGLE_API_KEY")
-            ):
+            if not _is_placeholder_key(os.getenv("GEMINI_API_KEY")) or not _is_placeholder_key(os.getenv("GOOGLE_API_KEY")):
                 try:
                     content = _call_gemini(
                         user_query,
@@ -531,9 +540,11 @@ def normalize_analysis_plan(plan: list) -> list:
 
         elif action == "calculate_descriptive_statistics":
 
-            columns = parameters.get(
-                "columns",
-                [],
+            columns = (
+                parameters.get("columns")
+                or parameters.get("column")
+                or parameters.get("metric")
+                or []
             )
 
             if isinstance(columns, str):

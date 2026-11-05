@@ -10,21 +10,27 @@ import type { UploadResponse } from "@/lib/types";
 type State =
   | { kind: "idle" }
   | { kind: "uploading"; name: string; loaded: number; total: number }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; status?: number };
 
 function checkFile(file: File): string | null {
   const lower = file.name.toLowerCase();
   if (!ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
-    return `Unsupported file type: ${file.name}. Use CSV, XLSX or JSON.`;
+    return `Unsupported file type: ${file.name}. Allowed formats: CSV, XLSX, JSON.`;
   }
   if (file.size === 0) return `${file.name} is empty.`;
   if (file.size > MAX_UPLOAD_BYTES) {
-    return `${file.name} is ${formatBytes(file.size)}. The limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
+    return `${file.name} is ${formatBytes(file.size)}. The maximum upload limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
   }
   return null;
 }
 
-export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadResponse) => void }) {
+interface UploadZoneProps {
+  onUploaded: (dataset: UploadResponse) => void;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export function UploadZone({ onUploaded, disabled = false, disabledReason }: UploadZoneProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -35,6 +41,8 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
   useEffect(() => () => abortRef.current?.abort(), []);
 
   async function handleFile(file: File) {
+    if (disabled) return;
+
     const problem = checkFile(file);
     if (problem) {
       setState({ kind: "error", message: problem });
@@ -55,6 +63,7 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
       setState({
         kind: "error",
         message: error instanceof Error ? error.message : "Upload failed.",
+        status: error instanceof ApiError ? error.status : undefined,
       });
     } finally {
       if (inputRef.current) inputRef.current.value = "";
@@ -71,7 +80,7 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
         id={inputId}
         type="file"
         accept={ALLOWED_EXTENSIONS.join(",")}
-        disabled={busy}
+        disabled={busy || disabled}
         className="peer sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -79,18 +88,24 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
         }}
       />
       <label
-        htmlFor={inputId}
+        htmlFor={disabled ? undefined : inputId}
         onDragEnter={(event) => {
+          if (disabled) return;
           event.preventDefault();
           dragDepth.current += 1;
           if (!busy) setDragging(true);
         }}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={(event) => {
+          if (disabled) return;
+          event.preventDefault();
+        }}
         onDragLeave={() => {
+          if (disabled) return;
           dragDepth.current = Math.max(0, dragDepth.current - 1);
           if (dragDepth.current === 0) setDragging(false);
         }}
         onDrop={(event) => {
+          if (disabled) return;
           event.preventDefault();
           dragDepth.current = 0;
           setDragging(false);
@@ -100,10 +115,12 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
         className={[
           "group block border border-dashed px-6 py-10 transition-colors duration-200 sm:px-10 sm:py-14",
           "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
-          busy ? "cursor-progress" : "cursor-pointer",
-          dragging
+          disabled ? "cursor-not-allowed opacity-60 bg-surface border-line" : busy ? "cursor-progress" : "cursor-pointer",
+          !disabled && dragging
             ? "border-accent bg-accent/[0.04]"
-            : "border-[#c9c9c4] bg-surface hover:border-ink",
+            : !disabled
+              ? "border-[#c9c9c4] bg-surface hover:border-ink"
+              : "",
         ].join(" ")}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -117,7 +134,13 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
             >
               <p className="mono-label">{fraction >= 1 ? "Validating on server" : "Uploading"}</p>
               <p className="mt-3 break-all text-2xl font-medium tracking-tight sm:text-3xl">{state.name}</p>
-              <div className="mt-8 h-px w-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(fraction * 100)}>
+              <div
+                className="mt-8 h-px w-full bg-line"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(fraction * 100)}
+              >
                 <motion.div
                   className="h-px origin-left bg-ink"
                   animate={{ scaleX: fraction }}
@@ -137,11 +160,30 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
               transition={{ duration: 0.15 }}
             >
               <p className="text-2xl font-medium tracking-tight sm:text-3xl">
-                {dragging ? "Release to upload" : "Drop a CSV, XLSX or JSON file"}
+                {disabled
+                  ? disabledReason || "Dataset upload requires authentication"
+                  : dragging
+                    ? "Release to upload"
+                    : "Drop a CSV, XLSX or JSON file"}
               </p>
               <p className="mt-3 text-[15px] text-muted">
-                or <span className="text-ink underline decoration-line underline-offset-4 group-hover:decoration-ink">browse your files</span>
-                . Up to 100 MB.
+                {disabled ? (
+                  <span>
+                    Please{" "}
+                    <a href="/auth/login" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
+                      sign in
+                    </a>{" "}
+                    to upload datasets.
+                  </span>
+                ) : (
+                  <>
+                    or{" "}
+                    <span className="text-ink underline decoration-line underline-offset-4 group-hover:decoration-ink">
+                      browse your files
+                    </span>
+                    . Up to 100 MB.
+                  </>
+                )}
               </p>
             </motion.div>
           )}
@@ -150,17 +192,27 @@ export function UploadZone({ onUploaded }: { onUploaded: (dataset: UploadRespons
 
       <AnimatePresence>
         {state.kind === "error" && (
-          <motion.p
+          <motion.div
             key="error"
             role="alert"
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="mt-3 border-l-2 border-bad pl-3 text-[14px] leading-6 text-bad"
+            className="mt-3 border-l-2 border-bad bg-bad/[0.04] p-3 text-[14px] leading-6 text-bad"
           >
-            {state.message}
-          </motion.p>
+            <p>{state.message}</p>
+            {state.status === 401 && (
+              <p className="mt-2 text-[12px]">
+                <a
+                  href="/auth/login"
+                  className="inline-block border border-bad/30 bg-surface px-2.5 py-1 font-mono uppercase tracking-wider text-bad hover:bg-bad hover:text-white"
+                >
+                  Sign in to continue →
+                </a>
+              </p>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -72,12 +72,25 @@ function PrimaryAnswer({ primary }: { primary: PrimaryFinding }) {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.25 }}
         >
-          <p className="mt-6 text-[17px] font-medium">
-            {humanize(metric)} by {primary.entityKey.toLowerCase()}
-          </p>
-          <p className="mt-1 max-w-xl text-xl leading-8 text-[#3b3b39]">
-            Highest {metric} among the analyzed {pluralize(primary.entityKey.toLowerCase())}.
-          </p>
+          {primary.entityKey.toLowerCase() === "dataset" ? (
+            <>
+              <p className="mt-6 text-[17px] font-medium">
+                {humanize(metric)} across dataset
+              </p>
+              <p className="mt-1 max-w-xl text-xl leading-8 text-[#3b3b39]">
+                Calculated across {primary.entity.toLowerCase()}.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-6 text-[17px] font-medium">
+                {humanize(metric)} by {primary.entityKey.toLowerCase()}
+              </p>
+              <p className="mt-1 max-w-xl text-xl leading-8 text-[#3b3b39]">
+                Peak {metric} among the analyzed {pluralize(primary.entityKey.toLowerCase())}.
+              </p>
+            </>
+          )}
           <p className="mt-5 font-mono text-[13px] tabular-nums text-muted">Exact: {formatExact(primary.value)}</p>
           {primary.message && (
             <p className="mt-1 max-w-2xl break-words font-mono text-[12.5px] leading-5 text-muted">{primary.message}</p>
@@ -92,7 +105,9 @@ function PrimaryAnswer({ primary }: { primary: PrimaryFinding }) {
           transition={{ duration: 0.35, delay: 0.35 }}
           className="border-t border-line pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-1"
         >
-          <p className="mono-label">Lowest {primary.entityKey.toLowerCase()}</p>
+          <p className="mono-label">
+            {primary.entityKey.toLowerCase() === "dataset" ? "Lowest recorded" : `Lowest ${primary.entityKey.toLowerCase()}`}
+          </p>
           <p className="mt-2 break-words text-2xl font-medium tracking-tight">{primary.lowEntity}</p>
           <p className="mt-1 text-2xl tabular-nums tracking-tight text-muted">
             {low.figure}

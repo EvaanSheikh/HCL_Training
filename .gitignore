@@ -35,8 +35,11 @@ dist/
 build/
 # Local databases
 data/*.db
+data/*.db-wal
+data/*.db-shm
 data/*.sqlite
 data/*.sqlite3
+data/*.bak
 
 # Large local datasets
 data/*.csv

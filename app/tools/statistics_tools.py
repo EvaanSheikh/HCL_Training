@@ -39,9 +39,19 @@ def calculate_descriptive_statistics(
         series = df[column].dropna()
 
         if series.empty:
-            raise ValueError(
-                f"Column '{column}' contains no valid values."
-            )
+            results[column] = {
+                "count": 0,
+                "mean": None,
+                "median": None,
+                "min": None,
+                "max": None,
+                "std": None,
+                "sum": 0.0,
+                "valid_count": 0,
+                "missing_count": int(df[column].isna().sum()),
+                "all_null": True,
+            }
+            continue
 
         results[column] = {
             "count": int(series.count()),

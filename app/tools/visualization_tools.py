@@ -52,13 +52,19 @@ def create_line_chart(
 
     path = _prepare_output_path(filename, output_dir)
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(9, 5))
 
-    ax.plot(df[x_column], df[y_column])
+    ax.plot(df[x_column], df[y_column], marker="o", linewidth=2, color="#0f766e")
 
-    ax.set_xlabel(x_column)
-    ax.set_ylabel(y_column)
-    ax.set_title(f"{y_column} over {x_column}")
+    clean_x = str(x_column).replace("_", " ").title()
+    clean_y = str(y_column).replace("_", " ").title()
+    ax.set_xlabel(clean_x)
+    ax.set_ylabel(clean_y)
+    ax.set_title(f"{clean_y} Trend over {clean_x}")
+    ax.grid(True, linestyle="--", alpha=0.5)
+
+    if not pd.api.types.is_numeric_dtype(df[x_column]) or len(df) <= 30:
+        plt.xticks(rotation=45, ha="right")
 
     fig.tight_layout()
 
